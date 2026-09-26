@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Price Check NL</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">Price Check <span>NL</span></div>
+      <small>Jev Ultrafast · sorted by unit price</small>
+    </header>
+    <main>
+      <form id="search">
+        <input id="product" name="product" maxlength="120" placeholder="Product, e.g. Nutrilon 3" required />
+        <button id="go" type="submit">Compare</button>
+      </form>
+      <details id="shop-picker">
+        <summary>Shops</summary>
+        <div id="shops"></div>
+      </details>
+      <p id="message" role="status"></p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Shop</th><th>Product</th><th class="n">Price</th><th>Promo</th>
+              <th class="n">Per item</th><th>Size</th><th class="n" id="unit-head">Unit price</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="fine">
+        Prices are read from each shop's search page and checked against the page text. "Per item" applies
+        multi-buy promotions (1+1, 2e halve prijs, 2 voor …) to one item. Always confirm on the shop's site.
+      </p>
+    </main>
+    <script>window.DEMO_TOKEN = "__TOKEN__";</script>
+    <script src="/app.js"></script>
+  </body>
+</html>

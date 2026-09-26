@@ -157,10 +157,11 @@ def field_context(goal, action, page, history):
     }
 
 
-def field_text(context):
+def text_completion(system, payload, *, purpose="TYPE_TEXT", max_tokens=1024):
+    """One JSON-mode call to the configured OpenAI-compatible text model. Returns (content, metadata)."""
     key = os.environ.get("TEXT_MODEL_API_KEY")
     if not key:
-        raise ValueError("TYPE_TEXT needs TEXT_MODEL_API_KEY; no text is hardcoded or guessed by the executor.")
+        raise ValueError(f"{purpose} needs TEXT_MODEL_API_KEY; no text is hardcoded or guessed by the executor.")
     base = os.environ.get("TEXT_MODEL_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
     model = os.environ.get("TEXT_MODEL", "deepseek-chat")
     reasoning = {"thinking": {"type": "disabled"}} if "api.deepseek.com/" in base else {"reasoning": {"effort": "low"}}
@@ -172,27 +173,33 @@ def field_text(context):
         key,
         {
             "model": model,
-            "max_tokens": 1024,
+            "max_tokens": max_tokens,
             "response_format": {"type": "json_object"},
             **reasoning,
             "messages": [
-                {"role": "system", "content": TEXT_VALUE},
-                {
-                    "role": "user",
-                    "content": json.dumps(context),
-                },
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(payload)},
             ],
         },
     )
     try:
-        output = json.loads(result["choices"][0]["message"]["content"])
+        content = result["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        content = None
+    return content, {
+        "model": model,
+        "latency_ms": round((time.perf_counter() - started) * 1000),
+        "usage": result.get("usage", {}),
+    }
+
+
+def field_text(context):
+    content, meta = text_completion(TEXT_VALUE, context)
+    try:
+        output = json.loads(content)
         value = output["text"]
         if set(output) != {"text"} or not isinstance(value, str) or not value.strip() or len(value) > 2000:
             raise ValueError()
     except (ValueError, KeyError, TypeError):
         raise ValueError("Text helper returned no valid field value; nothing typed.") from None
-    return value, {
-        "model": model,
-        "latency_ms": round((time.perf_counter() - started) * 1000),
-        "usage": result.get("usage", {}),
-    }
+    return value, meta

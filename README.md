@@ -91,6 +91,10 @@ uv run --env-file .env python examples/run.py \
 
 `uv run --env-file .env python examples/flights.py --keep-open` performs the flight search, checks the actual route/date/results, and saves its trace. It does not select or book a flight.
 
+## Price comparison app
+
+[pricecheck/](pricecheck/README.md) uses the same agent to compare one product across ten Dutch shops, sorted by unit price. It has a CLI and a small local web page. It has not been run live yet.
+
 ## Why it moves
 
 - **One request per decision cycle.** Operation and target heads share the same observed state.

@@ -1,0 +1,60 @@
+:root {
+  font-family: InterVariable, Inter, system-ui, sans-serif;
+  color: #252523;
+  background: #fafaf7;
+  font-variant-numeric: tabular-nums;
+  --line: rgb(0 0 0 / 0.09);
+  --green: #176743;
+  --orange: #ed6738;
+  --muted: #6b6b66;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header {
+  padding: 20px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.brand { font-size: 22px; font-weight: 600; letter-spacing: -0.6px; }
+.brand span { color: var(--orange); }
+header small, .fine { color: var(--muted); }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+form { display: flex; gap: 8px; }
+input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+button {
+  font: inherit;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--green);
+  color: white;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: wait; }
+details { margin: 12px 0; }
+#shops { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 8px; }
+#shops label { white-space: nowrap; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; white-space: nowrap; }
+.n { text-align: right; white-space: nowrap; }
+tr.best td { background: #eef6f1; }
+tr.missing td { color: var(--muted); }
+.promo { color: var(--orange); font-weight: 600; }
+.note { display: block; color: var(--muted); font-size: 12px; }
+td a { color: var(--green); }
+td:nth-child(2), td:nth-child(7) { white-space: nowrap; }
