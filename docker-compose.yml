@@ -1,0 +1,18 @@
+services:
+  pricecheck:
+    build: .
+    image: pricecheck-nl
+    env_file: .env
+    environment:
+      # Add your own domain when serving behind a reverse proxy, e.g. "localhost:8767,prices.example.nl".
+      PRICECHECK_ALLOWED_HOSTS: ${PRICECHECK_ALLOWED_HOSTS:-localhost:8767,127.0.0.1:8767}
+    ports:
+      # Loopback only. Set PRICECHECK_PASSWORD in .env before publishing the port more widely.
+      - "127.0.0.1:8767:8767"
+    shm_size: 1gb
+    volumes:
+      - pricecheck-data:/data
+    restart: unless-stopped
+
+volumes:
+  pricecheck-data:

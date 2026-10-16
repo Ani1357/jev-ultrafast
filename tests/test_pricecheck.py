@@ -229,3 +229,15 @@ def test_web_search_validates_input_and_runs_once():
     web.search("Nutrilon 3", [BY_KEY["ah"]], runner)
     assert web.public_state()["report"]["product"] == "Nutrilon 3"
     assert not web.public_state()["running"]
+
+
+def test_web_password_uses_basic_auth(monkeypatch):
+    import base64
+
+    monkeypatch.setattr(web, "PASSWORD", "s3cret")
+    basic = lambda password: "Basic " + base64.b64encode(f"any:{password}".encode()).decode()  # noqa: E731
+    assert web.authorized(basic("s3cret"))
+    assert not web.authorized(basic("wrong"))
+    assert not web.authorized(None) and not web.authorized("Bearer s3cret") and not web.authorized("Basic !!")
+    monkeypatch.setattr(web, "PASSWORD", "")
+    assert web.authorized(None)

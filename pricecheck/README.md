@@ -8,10 +8,32 @@ uv sync
 cp .env.example .env            # TYPESAFE_API_KEY and TEXT_MODEL_API_KEY
 uv run pricecheck "Nutrilon 3"                  # CLI table + artifacts/pricecheck/nutrilon-3/report.json
 uv run pricecheck "Nutrilon 3" --shops ah,jumbo # a subset
-uv run pricecheck-web                           # http://127.0.0.1:8767
+uv run pricecheck-web                           # http://127.0.0.1:8767 (or see Docker below)
 ```
 
 Chrome connects through Browser Harness, as in the main README. Every run makes paid TypeSafe and text-model calls.
+
+## Docker
+
+The image has its own Chromium, so you don't need a local Chrome.
+
+```bash
+cp .env.example .env            # TYPESAFE_API_KEY, TEXT_MODEL_API_KEY, optional PRICECHECK_PASSWORD
+docker compose up -d --build    # web page on http://localhost:8767
+docker compose run --rm pricecheck pricecheck "Nutrilon 3" --shops ah,jumbo   # CLI
+```
+
+- Chromium runs headed on a virtual display (Xvfb), because some shops refuse headless Chrome. Set
+  `CHROME_HEADLESS=1` for a lighter headless browser. DevTools listens only on the container's loopback.
+- Reports and Chrome's profile (cookie-consent choices) persist in the `pricecheck-data` volume under `/data`.
+- Compose publishes the port on `127.0.0.1` only. **Before exposing it elsewhere**, set `PRICECHECK_PASSWORD`
+  (HTTP Basic auth, any user name; every search costs model calls), put HTTPS in front, and add the public
+  host to `PRICECHECK_ALLOWED_HOSTS`, e.g. `localhost:8767,prices.example.nl`. Requests with any other Host
+  header are refused.
+- Chromium runs with `--no-sandbox` as an unprivileged user, the usual setup in containers. The container is
+  the isolation boundary, so don't mount anything sensitive into it.
+- Running shops from a data-centre IP gets more bot checks than a home connection. Those shops show up as
+  **not found**.
 
 ## How it works
 

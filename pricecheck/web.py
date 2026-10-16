@@ -1,5 +1,7 @@
-"""Loopback-only price comparison page. One search at a time; credentials stay server-side."""
+"""Price comparison page. Loopback-only by default; one search at a time; credentials stay server-side."""
 
+import base64
+import hmac
 import json
 import os
 import secrets
@@ -16,6 +18,12 @@ from .shops import BY_KEY, SHOPS
 ROOT = Path(__file__).parent / "static"
 PORT = int(os.environ.get("PRICECHECK_PORT", "8767"))
 ORIGIN = f"http://127.0.0.1:{PORT}"
+# A container binds 0.0.0.0 and names the Host headers it serves, e.g. "localhost:8767,prices.example.nl".
+BIND = os.environ.get("PRICECHECK_BIND", "127.0.0.1")
+HOSTS = {h.strip() for h in os.environ.get("PRICECHECK_ALLOWED_HOSTS", f"127.0.0.1:{PORT}").split(",") if h.strip()}
+ORIGINS = {f"{scheme}://{host}" for host in HOSTS for scheme in ("http", "https")}
+# Every search makes paid model calls. Set a password before exposing the page beyond this machine.
+PASSWORD = os.environ.get("PRICECHECK_PASSWORD", "")
 TOKEN = secrets.token_urlsafe(32)
 LOCK = threading.Lock()
 STATE = {"running": False, "product": None, "progress": {}, "report": None, "error": None}
@@ -60,6 +68,17 @@ def start(body, runner=compare):
     threading.Thread(target=search, args=(product, [BY_KEY[k] for k in keys], runner), daemon=True).start()
 
 
+def authorized(header):
+    if not PASSWORD:
+        return True
+    try:
+        scheme, encoded = (header or "").split(" ", 1)
+        _user, password = base64.b64decode(encoded).decode().split(":", 1)
+    except ValueError:
+        return False
+    return scheme.lower() == "basic" and hmac.compare_digest(password.encode(), PASSWORD.encode())
+
+
 class Handler(BaseHTTPRequestHandler):
     def send(self, status, content, mime="application/json"):
         content = content if isinstance(content, bytes) else content.encode()
@@ -71,9 +90,21 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def allowed(self):
+        if self.headers.get("Host") not in HOSTS:
+            self.send(403, "Forbidden", "text/plain")
+            return False
+        if not authorized(self.headers.get("Authorization")):
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="Price Check", charset="UTF-8"')
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return False
+        return True
+
     def do_GET(self):
-        if self.headers.get("Host") != f"127.0.0.1:{PORT}":
-            return self.send(403, "Forbidden", "text/plain")
+        if not self.allowed():
+            return
         path = urlparse(self.path).path
         if path == "/api/state":
             return self.send(200, json.dumps(public_state()))
@@ -85,10 +116,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, (ROOT / name).read_text().replace("__TOKEN__", TOKEN), mime + "; charset=utf-8")
 
     def do_POST(self):
+        if not self.allowed():
+            return
         if (
-            self.headers.get("Host") != f"127.0.0.1:{PORT}"
-            or self.headers.get("X-Demo-Token") != TOKEN
-            or self.headers.get("Origin") not in (None, ORIGIN)
+            self.headers.get("X-Demo-Token") != TOKEN
+            or self.headers.get("Origin") not in (None, *ORIGINS)
             or urlparse(self.path).path != "/api/search"
         ):
             return self.send(403, json.dumps({"error": "Local requests only"}))
@@ -107,8 +139,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     load_environment()
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"Price check: {ORIGIN}", flush=True)
+    server = ThreadingHTTPServer((BIND, PORT), Handler)
+    print(f"Price check: {ORIGIN}" if BIND == "127.0.0.1" else f"Price check on {BIND}:{PORT} for {sorted(HOSTS)}",
+          flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
